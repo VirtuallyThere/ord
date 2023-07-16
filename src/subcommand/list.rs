@@ -4,6 +4,8 @@ use super::*;
 pub(crate) struct List {
   #[clap(help = "List sats in <OUTPOINT>.")]
   outpoint: OutPoint,
+  #[clap(help = "Find sats with names containing substring <STRING>.")]
+  substr: Option<String>,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -15,6 +17,7 @@ pub struct Output {
   pub offset: u64,
   pub rarity: Rarity,
   pub name: String,
+  pub substrings: Vec<(String, u64)>
 }
 
 impl List {
@@ -28,6 +31,17 @@ impl List {
         let mut outputs = Vec::new();
         let mut offset = 0;
         for (output, start, end, size, rarity, name) in list(self.outpoint, ranges) {
+
+          let substrings = if let Some(substr) = &self.substr {
+            (start..end)
+              .map(Sat)
+              .map(|sat| (sat.name(), sat.0))
+              .filter(|(name, _)| name.contains(substr))
+              .collect()
+          } else {
+            Vec::new()
+          };
+
           outputs.push(Output {
             output,
             start,
@@ -36,6 +50,7 @@ impl List {
             offset,
             rarity,
             name,
+            substrings
           });
           offset += size;
         }
